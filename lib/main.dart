@@ -6,6 +6,25 @@ void main() {
   runApp(const MyApp());
 }
 
+class Character {
+  final String name;
+  final String imageUrl;
+  final String description;
+
+  Character(
+      {required this.name, required this.imageUrl, required this.description});
+
+  factory Character.fromJson(Map<String, dynamic> json) {
+    return Character(
+      name: json['name'],
+      imageUrl:
+          'https://starwars-visualguide.com/assets/img/characters/${json['url'].split('/')[5]}.jpg',
+      description:
+          'Height: ${json['height']}, Mass: ${json['mass']}, Hair Color: ${json['hair_color']}, Skin Color: ${json['skin_color']}',
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -32,15 +51,13 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   TextEditingController _controller = TextEditingController();
-  String _searchResult = '';
-  String _imageUrl = '';
+  Character? _character;
   bool _isLoading = false;
 
   Future<void> _fetchCharacter(String name) async {
     setState(() {
       _isLoading = true;
-      _searchResult = '';
-      _imageUrl = '';
+      _character = null;
     });
 
     final response =
@@ -54,18 +71,16 @@ class _SearchScreenState extends State<SearchScreen> {
       Map<String, dynamic> data = json.decode(response.body);
       if (data['results'].length > 0) {
         setState(() {
-          _searchResult = data['results'][0].toString();
-          _imageUrl =
-              'https:/images/${data['results'][0]['name'].toLowerCase().replaceAll(' ', '-')}.jpg';
+          _character = Character.fromJson(data['results'][0]);
         });
       } else {
         setState(() {
-          _searchResult = 'Character not found.';
+          _character = null;
         });
       }
     } else {
       setState(() {
-        _searchResult = 'Failed to load data.';
+        _character = null;
       });
     }
   }
@@ -79,6 +94,7 @@ class _SearchScreenState extends State<SearchScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: _controller,
@@ -95,22 +111,23 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 20),
             _isLoading
                 ? const CircularProgressIndicator()
-                : Column(
-                    children: [
-                      Image.network(
-                        _imageUrl,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Text('Image not available'),
-                      ),
-                      const SizedBox(height: 20),
-                      SingleChildScrollView(
-                        child: Text(
-                          _searchResult,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
+                : _character != null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Image.network(
+                            _character!.imageUrl,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Text('Image not available'),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            _character!.description,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      )
+                    : const Text('Character not found.'),
           ],
         ),
       ),
